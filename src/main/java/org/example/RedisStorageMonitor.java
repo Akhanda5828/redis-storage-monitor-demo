@@ -5,6 +5,48 @@ import java.util.Map;
 import java.util.Properties;
 
 public class RedisStorageMonitor {
+    /*
+     * Original simplified logic (Standalone-only assumption)
+     *
+     * This version assumed Redis always returned flat keys like:
+     *   used_memory
+     *   maxmemory
+     *
+     * It did not account for cluster mode where keys are prefixed
+     * per node (e.g., node1.used_memory).
+     *
+     * public Integer getStoragePercentage() {
+     *
+     *     long usedMemory;
+     *     long maxMemory;
+     *
+     *     try {
+     *         Properties memoryInfo = redisTemplate
+     *             .getRequiredConnectionFactory()
+     *             .getConnection()
+     *             .info("memory");
+     *
+     *         usedMemory = Long.parseLong(
+     *             memoryInfo.getProperty("used_memory", "0"));
+     *
+     *         maxMemory = Long.parseLong(
+     *             memoryInfo.getProperty("maxmemory", "0"));
+     *
+     *     } catch (Exception e) {
+     *         return 0;
+     *     }
+     *
+     *     if (maxMemory == 0) return 0;
+     *     if (usedMemory > maxMemory) return 100;
+     *
+     *     return (int)(usedMemory * 100 / maxMemory);
+     * }
+     *
+     * Limitation:
+     * In cluster mode, this logic failed because Redis returns
+     * prefixed keys per node (e.g., node1.used_memory),
+     * causing threshold checks to never trigger correctly.
+     */
 
     public int getStoragePercentage(Properties memoryInfo) {
 
