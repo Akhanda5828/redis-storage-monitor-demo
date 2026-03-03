@@ -108,4 +108,64 @@ public class RedisStorageMonitorTest {
         assertTrue(status.percentage() >= 40);
         assertTrue(status.thresholdExceeded());  // because threshold = 10%
     }
+    @Test
+    void shouldReturnRedisUnavailableWhenMemoryInfoIsEmpty() {
+
+        RedisDatabaseService mockDb = mock(RedisDatabaseService.class);
+
+        // Simulate Redis returning empty properties
+        Properties props = new Properties();
+
+        when(mockDb.getMemoryInfo()).thenReturn(props);
+
+        RedisStorageMonitorService service =
+                new RedisStorageMonitorService(mockDb);
+
+        StorageStatus status = service.checkStorageStatus();
+
+        assertFalse(status.redisAvailable());
+        assertEquals(0, status.percentage());
+        assertFalse(status.thresholdExceeded());
+    }
+
+    @Test
+    void shouldReturnZeroPercentageWhenMaxMemoryIsZero() {
+
+        RedisDatabaseService mockDb = mock(RedisDatabaseService.class);
+
+        Properties props = new Properties();
+        props.setProperty("used_memory", "5000000");
+        props.setProperty("maxmemory", "0");  // Critical edge case
+
+        when(mockDb.getMemoryInfo()).thenReturn(props);
+
+        RedisStorageMonitorService service =
+                new RedisStorageMonitorService(mockDb);
+
+        StorageStatus status = service.checkStorageStatus();
+
+        assertTrue(status.redisAvailable());
+        assertEquals(0, status.percentage());
+        assertFalse(status.thresholdExceeded());
+    }
+
+    @Test
+    void shouldHandleMissingUsedMemoryGracefully() {
+
+        RedisDatabaseService mockDb = mock(RedisDatabaseService.class);
+
+        Properties props = new Properties();
+        props.setProperty("maxmemory", "50000000");
+
+        when(mockDb.getMemoryInfo()).thenReturn(props);
+
+        RedisStorageMonitorService service =
+                new RedisStorageMonitorService(mockDb);
+
+        StorageStatus status = service.checkStorageStatus();
+
+        assertFalse(status.redisAvailable());
+        assertEquals(0, status.percentage());
+        assertFalse(status.thresholdExceeded());
+    }
 }
